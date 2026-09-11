@@ -1,0 +1,89 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  KEEPER
+}
+
+enum HiveStatus {
+  active
+  quarantine
+  empty
+}
+
+enum HarvestStatus {
+  stored
+  bottled
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(KEEPER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Apiary {
+  id          Int       @id @default(autoincrement())
+  name        String
+  location    String
+  altitude    Int?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  hives       Hive[]
+  harvests    Harvest[]
+}
+
+model Hive {
+  id            Int          @id @default(autoincrement())
+  apiaryId      Int
+  boxNumber     String
+  beeSpecies    String
+  queenYear     Int?
+  status        HiveStatus   @default(active)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  apiary        Apiary       @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
+  inspections   Inspection[]
+
+  @@unique([apiaryId, boxNumber])
+}
+
+model Inspection {
+  id           Int      @id @default(autoincrement())
+  hiveId       Int
+  date         DateTime
+  colonyScore  Int
+  miteCount    Int      @default(0)
+  honeyFrames  Int      @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  hive         Hive     @relation(fields: [hiveId], references: [id], onDelete: Cascade)
+}
+
+model Harvest {
+  id          Int           @id @default(autoincrement())
+  apiaryId    Int
+  date        DateTime
+  honeyType   String
+  netWeightKg Float
+  moisturePct Float
+  status      HarvestStatus @default(stored)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  apiary      Apiary        @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
+}
